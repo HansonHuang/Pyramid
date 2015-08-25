@@ -8,6 +8,17 @@
 
 namespace Pyramid\Component\Route;
 
+/**
+ * 返回的格式
+    {
+      baseroute  : 注册时的路由
+      matchroute : 实际匹配的路由
+      weight     : 权重
+      callback   : 回调函数
+      segments   : 请求的路径数组
+      path       : 请求的路径
+    }
+ */
 abstract class Route {
 
     /**
@@ -66,26 +77,26 @@ abstract class Route {
     public static function match($path, $strict = false) {
         $segments = static::getSegments($path);
         $length = count($segments);
-        $max = (1<<$length+1) - 2;
-        $min = $strict ? (1<<$length) - 1 : 1;
+        $max = (1<<$length) - 1;
+        $min = $strict ? 1<<max(0,$length-1) : 1;
         foreach (range($max,$min) as $i) {
-            if ($i < (1<<$length) - 1) {
+            if ($i < (1<<$length-1)) {
                 --$length;
             }
-            //thanks to wife
-            $over = $i - ((1<<$length) - 1);
             $match = array();
             for ($j = 0; $j < $length; $j++) {
-                $match[] = $over & (1<<$j) ? $segments[$j] : '*';
+                $match[] = $i & (1<<$length-$j-1) ? $segments[$j] : '*';
             }
             $weight = static::getWeight($match);
             $route = implode('/', $match);
             if (isset(static::$routes[$weight][$route])) {
-                $return = static::$routes[$weight][$route];
-                $return['path'] = implode('/', $segments);
-                $return['segments'] = $segments;
-                return $return;
+                $info = static::$routes[$weight][$route];
+                return static::prepareRoute($info, $segments);
             }
+        }
+        if (isset(static::$routes[0]['*'])) {
+            $info = static::$routes[0]['*'];
+            return static::prepareRoute($info, $segments);
         }
     }
 
@@ -124,19 +135,18 @@ abstract class Route {
      */
     public static function getWeight($segments) {
         $weight = 0;
+        $count  = count($segments);
         foreach ($segments as $i => $segment) {
-            if ($segment == '*') {
-                $weight += 1 << $i;
-            } elseif (substr($segment,0,1)=='{' && substr($segment,-1,1)=='}') {
-                $weight += 1 << $i;
-            } else {
-                $weight += 1 << $i+1;
-            }
+            if ($segment == '*') { continue; }
+            if (substr($segment,0,1)=='{' && substr($segment,-1,1)=='}') { continue; }
+            $weight += 1 << ($count-$i-1);
         }
         return $weight;
     }
     
-    //把{key}转化为*的route
+    /**
+     * 把{key}转化为*
+     */
     public static function changeRoute($segments) {
         foreach ($segments as $i => $segment) {
             if (substr($segment,0,1)=='{' && substr($segment,-1,1)=='}') {
@@ -144,6 +154,15 @@ abstract class Route {
             }
         }
         return implode('/', $segments);
+    }
+    
+    /**
+     * 返回之前增加一些数据
+     */
+    public static function prepareRoute($info, $segments) {
+        $info['segments'] = $segments;
+        $info['path'] = implode('/', $segments);
+        return $info;
     }
     
     //字符串以/分段

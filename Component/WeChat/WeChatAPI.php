@@ -637,4 +637,18 @@ class WeChatAPI {
         return $token['token'];
     }
 
+    /**
+     * 验证配置
+     */
+    public function validateConfig() {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s';
+        $body = Utility::http(sprintf($url, $this->getConfig('appid'), $this->getConfig('appsecret')));
+        $json = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
 }
