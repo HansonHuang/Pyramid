@@ -24,6 +24,9 @@ class PhpSession {
      * 析构函数
      */
     public function __construct($config = array()) {
+        if (!empty($config['path']) && is_dir($config['path'])) {
+            session_save_path($config['path']);
+        }
         if (!isset($_SESSION)) {
             session_start();
         }

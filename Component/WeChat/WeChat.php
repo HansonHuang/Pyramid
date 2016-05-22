@@ -13,10 +13,21 @@ use Exception;
 /**
 
 $config = array(
-    'token'     => '',
-    'appid'     => '',
-    'appsecret' => '',
-    'aeskey'    => '',
+    'wid'       => '0', //[可选] 多账户标识
+    'token'     => '',  //公众号设置的TOKEN
+    'appid'     => '',  //公众号APPID
+    'appsecret' => '',  //公众号APPSECRET
+    'aeskey'    => '',  //[可选] AES密文模式
+    'username'  => '',  //[可选] 公众微信号
+    'mch_id'    => '',  //微信支付:商户号
+    'pay_key'   => '',  //微信支付:秘钥
+    'client_ip' => '',  //微信支付:本机IP
+    'certs'     => array( //微信支付:证书
+        CURLOPT_SSLCERTTYPE => 'PEM',
+        CURLOPT_SSLCERT   => 'apiclient_cert.pem',
+        CURLOPT_SSLKEY    => 'apiclient_key.pem',
+        CURLOPT_CAINFO    => 'rootca.pem',
+    )
 );
 
 $wechat = new WeChat($config);
@@ -141,6 +152,7 @@ class WeChat extends WeChatAPI {
         } elseif ($callback) {
             $response = call_user_func($callback, $request);
         } elseif ($this->fallbacks) {
+            $response = '';
             foreach ($this->fallbacks as $fallback) {
                 if (is_callable(array($fallback, $event))) {
                     $response = call_user_func(array($fallback, $event), $request); 

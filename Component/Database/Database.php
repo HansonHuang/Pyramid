@@ -129,7 +129,7 @@ abstract class Database {
     final public static function parseConnectionInfo() {
         global $databases;
         if (!self::$isConfiguration) {
-            $databaseInfo = is_array($databases) ? $databases : array();        
+            $databaseInfo = is_array($databases) ? $databases : array('default'=>array());        
             self::$databaseInfo = $databaseInfo;
         }
     }

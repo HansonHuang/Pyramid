@@ -12,6 +12,7 @@ $sessions = array(
     'prefix' => '',
     'expire' => 0,
     'class'  => 'Pyramid\Component\Session\PhpSession',
+    'path'   => '', //phpsess存储路径
 );
 
 //配置: 数据库

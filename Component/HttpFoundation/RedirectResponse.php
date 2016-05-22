@@ -73,13 +73,18 @@ class RedirectResponse extends Response {
      * @api
      */
     public function sendContent() {
-        echo '<meta http-equiv="refresh" content="'.$this->redirectTime.';url=\''.$this->redirectUrl.'\'" />';
-        echo $this->content;
+        if (!$this->content && !headers_sent() && $this->redirectTime==0) {
+            header("Location: {$this->redirectUrl}");
+        } else {
+            echo '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />',
+                 '<meta http-equiv="refresh" content="'.$this->redirectTime.';url=\''.$this->redirectUrl.'\'" />';
+            echo $this->content;
+        }
         return $this;
     }
 
     //自身迭代
-    public static function create($url, $time = 0, $content = '', $headers = array()) {
+    public static function createme($url, $time = 0, $content = '', $headers = array()) {
         return new static($url, $time, $content, $headers);
     }
 

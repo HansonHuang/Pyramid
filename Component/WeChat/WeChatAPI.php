@@ -84,7 +84,7 @@ class WeChatAPI {
     public function uploadFile($type, $file) {
         static $url = 'http://file.api.weixin.qq.com/cgi-bin/media/upload?access_token=%s&type=%s';
         $token = $this->getAccessToken();
-        $body  = Utility::http(sprintf($url, $token, $type), array('media' => '@'.realpath($file)));
+        $body  = Utility::http(sprintf($url, $token, $type), array('media' => CURLFile::realpath($file)));
         $json  = json_decode($body, true);
         if (!$json || !empty($json['errcode'])) {
             return false;
@@ -98,7 +98,7 @@ class WeChatAPI {
      *
      * @return boolean | binary
      */
-    public function downloadFile($media_id) {
+    public function downloadFile($media_id, $filename='') {
         static $url = 'http://file.api.weixin.qq.com/cgi-bin/media/get?access_token=%s&media_id=%s';
         $token = $this->getAccessToken();
         $body  = Utility::http(sprintf($url, $token, $media_id));
@@ -113,11 +113,11 @@ class WeChatAPI {
      * 获取单个用户信息
      *
      * @return boolean | array(
-            subscribe      =>,
+            subscribe      => 0:未关注 1:关注,
             openid         =>,
             nickname       =>,
-            sex            =>,
-            language       =>,
+            sex            => 0:未知 1:男 2:女,
+            language       => zh_CN,
             city           =>,
             province       =>,
             country        =>,
@@ -471,7 +471,7 @@ class WeChatAPI {
      *
      * @param array(
           redirect_uri =>,
-          scope        =>,
+          scope        => snsapi_base | snsapi_userinfo,
           state        =>,
        )
      *
@@ -483,7 +483,7 @@ class WeChatAPI {
             'appid'         => $this->getConfig('appid'),
             'redirect_uri'  => $param['redirect_uri'],
             'response_type' => 'code',
-            'scope'         => $param['scope'],
+            'scope'         => !empty($param['scope']) ? $param['scope'] : 'snsapi_base',
             'state'         => $param['state'],
         );
         return vsprintf($url, $args);
@@ -615,7 +615,55 @@ class WeChatAPI {
             return $json;
         }
     }
+
+    /**
+     * 获取JS API Ticket
+     *
+     * @return {
+            "errcode":0,
+            "errmsg":"ok",
+            "ticket":"bxLdikRXVbTPdHSM05e5u5sUoXNKdvsdshFKA",
+            "expires_in":7200
+        }
+     */
+    public function getJsTicket() {
+        static $url = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token=%s";
+        $ticket = Utility::getJsTicket($this);
+        if (empty($ticket) || time() > $ticket['expired']) {
+            $token = $this->getAccessToken();
+            $body  = Utility::http(sprintf($url, $token));
+            $json  = json_decode($body, true);
+            if (!$json || !empty($json['errcode'])) {
+                throw new Exception('Error - WeChat Can not get JsTicket.');
+            } else {
+                $ticket['ticket']   = $json['ticket'];
+                $ticket['expired'] = time() + $json['expires_in'] - 120;
+                Utility::setJsTicket($ticket, $this);
+            }
+        }
+        
+        return $ticket['ticket'];
+    }
     
+    /**
+     * 获取wx.config需要的数据
+     *
+     * @param string uri 当前网址(#前的所有字符)
+     */
+    public function wxConfig($uri = '') {
+        $timestamp  = time();
+        $nonceStr   = md5(microtime(true));
+        $ticket     = $this->getJsTicket();
+        $string     = "jsapi_ticket={$ticket}&noncestr={$nonceStr}&timestamp={$timestamp}&url=" . $uri;
+        $signature  = sha1($string);
+        return array(
+            'appId'     => $this->getConfig('appid'),
+            'timestamp' => $timestamp,
+            'nonceStr'  => $nonceStr,
+            'signature' => $signature,
+        );
+    }
+
     /**
      * 获取access_token
      */
@@ -649,6 +697,131 @@ class WeChatAPI {
         } else {
             return true;
         }
+    }
+
+
+    /**
+     * 发送现金红包
+     * @see https://pay.weixin.qq.com/wiki/doc/api/cash_coupon.php?chapter=13_5
+     *
+     * data {
+            'mch_billno'   : 商户订单号,唯一
+            'send_name'    : 商户名称
+            're_openid'    : 用户openid,
+            'total_amount' : 金额 单位:分,
+            'total_num'    : 红包发放总人数,写1就可,
+            'wishing'      : 红包祝福语,
+            'act_name'     : 活动名称,
+            'remark'       : 备注,
+            
+            'nonce_str'    : [可选] 随机字符串,
+            'mch_id'       : [可选] 商户号,
+            'client_ip'    : [可选] 客户端IP
+            'wxappid'      : [可选] 公众号appid,
+        }
+     *@return true|false
+     */
+    public function sendRedpack(array $data) {
+        static $url = 'https://api.mch.weixin.qq.com/mmpaymkttransfers/sendredpack';
+        $data += array(
+            'nonce_str' => md5(microtime(true)),
+            'client_ip' => $this->getConfig('client_ip'),
+            'mch_id'    => $this->getConfig('mch_id'),
+            'wxappid'   => $this->getConfig('appid'),
+        );
+        $data = Utility::makeSign($data, $this->getConfig('pay_key'));
+        $xml  = '<xml>' . Utility::buildXML($data) . '</xml>';
+        $body = Utility::http($url, $xml, $this->getConfig('certs'));
+        try {
+            $obj = @simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOBLANKS);
+            $res = Utility::extractXML($obj);
+            if ($res['return_code'] == 'SUCCESS' && $res['result_code'] == 'SUCCESS') {
+                return $res;
+            } else {
+                logger()->error('sendRedpack(Error): ' . $res['return_msg'] . '|' . $res['err_code_des']);
+                return false;
+            }
+        } catch (Exception $e) {
+            logger()->error('sendRedpack(Exception): ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 微信统一下单
+     * @see https://pay.weixin.qq.com/wiki/doc/api/jsapi.php?chapter=9_1
+     * @see https://pay.weixin.qq.com/wiki/doc/api/jsapi.php?chapter=9_7 下单回调结果
+     * data {
+            body        : 商品描述(128)
+            detail      : [可选] 商品详情(8192)
+            attach      : [可选] 附加信息(127)
+            out_trade_no: 商户订单号(32)
+            total_fee   : 总额(单位为分)
+            time_start  : [可选] 交易起始时间 yyyyMMddHHmmss
+            time_expire : [可选] 交易结束时间 yyyyMMddHHmmss
+            goods_tag   : [可选] 商品标记(32)
+            notify_url  : 回调地址
+            trade_type  : 交易类型 JSAPI:公众号支付 NATIVE:原生扫码支付 APP:app支付
+            product_id  : [可选] 商品ID(32)
+            limit_pay   : [可选] 指定支付方式 no_credit
+            openid      : OPENID (trade_type=JSAPI 此参数必须)
+            
+            appid       : [可选] 公众号appid
+            mch_id      : [可选] 商户号
+            device_info : [可选] WEB
+            nonce_str   : [可选] 随机字符
+            fee_type    : [可选] CNY
+            spbill_create_ip: IP
+        }
+     *@return array(
+                trade_type JSAPI NATIVE APP
+                prepay_id  预支付交易会话,2小时有效
+                code_url   trade_type为NATIVE是有返回
+              )  | false
+     */
+    public function sendOrder(array $data) {
+        static $url = 'https://api.mch.weixin.qq.com/pay/unifiedorder';
+        $data += array(
+            'appid'       => $this->getConfig('appid'),
+            'mch_id'      => $this->getConfig('mch_id'),
+            'device_info' => 'WEB',
+            'nonce_str'   => md5(microtime(true)),
+            'fee_type'    => 'CNY',
+            'spbill_create_ip' => $this->getConfig('client_ip'),
+            'trade_type'  => 'JSAPI',
+        );
+        $data = Utility::makeSign($data, $this->getConfig('pay_key'));
+        $xml  = '<xml>' . Utility::buildXML($data) . '</xml>';
+        $body = Utility::http($url, $xml);
+        try {
+            $obj = @simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOBLANKS);
+            $res = Utility::extractXML($obj);
+            if ($res['return_code'] == 'SUCCESS' && $res['result_code'] == 'SUCCESS') {
+                return $res;
+            } else {
+                logger()->error('sendOrder(Error): ' . $res['return_msg'] . '|' . $res['err_code_des']);
+                return false;
+            }
+        } catch (Exception $e) {
+            logger()->error('sendOrder(Exception): ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 微信JSAPI支付js数据
+     * @parameter $res JSAPI下单返回的数组
+     */
+    public function jsPayConfig($res) {
+        $data = array(
+            'appId'     => !empty($res['appid']) ? $res['appid'] : $this->getConfig('appid'),
+            'timeStamp' => time(),
+            'nonceStr'  => md5(microtime(true)),
+            'package'   => 'prepay_id=' . $res['prepay_id'],
+            'signType'  => 'MD5',            
+        );
+        $data['paySign'] = Utility::getSign($data, $this->getConfig('pay_key'));
+        return $data;
     }
 
 }

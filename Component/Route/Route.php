@@ -74,12 +74,11 @@ abstract class Route {
     /**
      * 匹配route
      */
-    public static function match($path, $strict = false) {
+    public static function match($path) {
         $segments = static::getSegments($path);
         $length = count($segments);
         $max = (1<<$length) - 1;
-        $min = $strict ? 1<<max(0,$length-1) : 1;
-        foreach (range($max,$min) as $i) {
+        foreach (range($max,1) as $i) {
             if ($i < (1<<$length-1)) {
                 --$length;
             }

@@ -24,7 +24,7 @@ class RouteBag extends ParameterBag {
         'path'       => '',
         'segments'   => array(),
     );
-    
+
     /**
      * 析构函数
      *
@@ -42,6 +42,17 @@ class RouteBag extends ParameterBag {
         return isset($this->route[$key]) ? $this->route[$key] : $default; 
     }
     
+    //匹配的路径是够包含指定路径
+    function contain($path) {
+        $segments = explode('/', trim($path,'/'));
+        foreach ($segments as $i=>$segment) {
+            if ($this->getParameter($i) !== $segment) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     //初始化route
     protected function prepare($route) {
         $this->route  = (array) $route + $this->route;

@@ -39,7 +39,7 @@ class Request extends ParameterBag {
     public function initialize($xmlData, $replace = true) {
         $this->content = $xmlData;
         $xml = @simplexml_load_string($xmlData, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOBLANKS);
-        $params = (array) self::extractXML($xml);
+        $params = (array) Utility::extractXML($xml);
         $params += array_change_key_case($params, CASE_LOWER);
         if ($replace) {
             parent::replace($params);
@@ -75,26 +75,6 @@ class Request extends ParameterBag {
      */
     public static function createFromGlobals() {
         return new static(file_get_contents('php://input'));
-    }
-    
-    //解析XML
-    protected static function extractXML($xml = false) {
-        if ($xml === false) {
-            return false;
-        }
-        if (!($xml->children())) {
-            return (string) $xml;
-        }
-        foreach ($xml->children() as $child) {
-            $name = $child->getName();
-            if (count($xml->$name) == 1) {
-                $element[$name] = self::extractXML($child);
-            } else {
-                $element[][$name] = self::extractXML($child);
-            }
-        }
-
-        return $element;
     }
 
 }

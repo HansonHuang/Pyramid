@@ -224,10 +224,10 @@ class Request {
     }
     
     /*
-     * 获取path
+     * 获取path uri
      */
-    public function getUriForPath($path = '', $qs = '') {
-        $uri = $this->getSchemeAndHttpHost() . $this->getBaseUrl() . $path;
+    public function getUriForPath($path = '', $qs = '', $absolute = true) {
+        $uri = ($absolute ? $this->getSchemeAndHttpHost() : '') . $this->getBaseUrl() . '/' . ltrim($path,'/');
         if ($qs && (is_array($qs) || is_object($qs))) {
             $qs = http_build_query($qs);
         }
@@ -237,7 +237,7 @@ class Request {
             return $uri;
         }
     }
-    
+
     /*
      * 获取uri
      */
@@ -305,6 +305,18 @@ class Request {
         }
         array_multisort($order, SORT_ASC, $parts);
         return implode('&', $parts);
+    }
+
+    /**
+     * clone
+     */
+    function __clone() {
+        $this->get     = clone $this->get;
+        $this->post    = clone $this->post;
+        $this->cookies = clone $this->cookies;
+        $this->params  = clone $this->params;
+        $this->server  = clone $this->server;
+        $this->files   = clone $this->files;
     }
 
 }

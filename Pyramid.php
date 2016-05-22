@@ -9,7 +9,7 @@
 /**
  * 框架版本
  */
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 
 /**
  * 加载启动文件

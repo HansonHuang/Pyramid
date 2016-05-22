@@ -10,6 +10,21 @@ namespace Pyramid\Component\Entity;
 
 /**
  * Entity 配置器
+
+    CREATE TABLE `{field_config}` (
+        `id` INT(10) UNSIGNED NOT NULL COMMENT '自增主键',
+        `entity_type` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'Entity Type',
+        `field_name` VARCHAR(128) NOT NULL DEFAULT '' COMMENT '字段名称',
+        `data` LONGTEXT NOT NULL COMMENT '字段信息',
+        `active` TINYINT(1) NOT NULL COMMENT '是否启用',
+        `locked` TINYINT(1) NOT NULL COMMENT '是否锁定',
+        PRIMARY KEY (`id`),
+        INDEX `entity_type` (`entity_type`, `active`)
+    )
+    COMMENT='字段配置表'
+    COLLATE='utf8_general_ci'
+    ENGINE=InnoDB;
+
  */
 abstract class EntityConfigurator {
     
@@ -106,13 +121,18 @@ abstract class EntityConfigurator {
     
     //获取Entity的主表信息
     public static function getEntityPrimaryFields($entityType) {
+        $table = self::$entityInfo[$entityType]['baseTable'];
+        return self::getSchema($table);
+    }
+
+    //获取table的schema信息
+    public static function getSchema($table) {
         static $schemas;
         if (is_null($schemas)) {
             $schemas = db_schema()->getSchema();
         }
-        $table = self::$entityInfo[$entityType]['baseTable'];
         $table = db_getconnection()->replacePrefix('{' . $table . '}');
         return isset($schemas[$table]) ? $schemas[$table] : array();
     }
-
+    
 }

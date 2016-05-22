@@ -22,6 +22,11 @@ function entity_load($entityType, $ids = array(), $conditions = array(), $fromQu
     return entity($entityType)->load($ids, $conditions, $fromQuery);
 }
 
+//读取Entity对象
+function entity_object($entityType, $ids = array(), $conditions = array(), $fromQuery = false) {
+    return entity($entityType)->loadObject($ids, $conditions, $fromQuery);
+}
+
 //添加Entity
 function entity_insert($entityType, $entity) {
     return entity($entityType)->insert($entity);

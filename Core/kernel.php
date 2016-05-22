@@ -20,6 +20,11 @@ class Kernel {
     public $request;
     
     /**
+     * 条件和执行
+     */
+    static $dispatches = array();
+    
+    /**
      * 初始化
      */
     public function init($request) {
@@ -32,7 +37,8 @@ class Kernel {
      */
     public function handle(Request $request) {
         $this->prepareCli($request);
-        $route = Route::match($request->getPathInfo());
+        $ipath = $this->getTruePath($request->getPathInfo());
+        $route = Route::match($ipath);
         $request->route = new RouteBag($route);
         $this->init($request);
         $this->afterRoute($request);
@@ -46,25 +52,45 @@ class Kernel {
         if ($response instanceof Response) {
             return $response;
         } elseif($response === null) {
-            return new Response('', 204);
+            return new Response('', 206);
         } else {
             return new Response($response);
         }
     }
 
     /**
+     * 获取内部真实路由名
+     */
+    public function getTruePath($externalPath) {
+        return $externalPath;
+    }
+
+    /**
      * 对路由解析之后的再处理
      */
     public function afterRoute($request) {
-
+        foreach (static::$dispatches as $do) {
+            if (is_object($do) && get_class($do) == 'Closure') {
+                $do($request);
+            } else {
+                call_user_func($do, $request);
+            }
+        }
     }
     
+    /**
+     * 添加路由对应的执行动作
+     */
+    public static function dispatch($do) {
+        static::$dispatches[] = $do;
+    }
+
     /**
      * 注册应用
      */
     public function registerProject($project, $dir, $prefix = '') {
         class_loader()->registerNamespace($project, $dir);
-        $files = file_scan($dir.'/'.$project, "|(\w+)/\\1.php$|is", array('fullpath'=>true,'minDepth'=>2));
+        $files = file_include($dir.'/'.$project, "|(\w+)/\\1.php$|is", array('fullpath'=>true,'minDepth'=>2));
         foreach ($files as $f) {
             list ($module,) = explode('.', $f['basename']);
             $r = new ReflectionClass("{$project}\\{$module}\\{$module}");
@@ -77,10 +103,23 @@ class Kernel {
         }
     }
 
+    public function registerModule($project, $dir, $prefix = '') {
+        $this->registerProject($project, $dir, $prefix);
+    }
+    
+    /**
+     * 载入并注册自动加载Entity
+     */
+    public function registerEntity($namespace, $dir, $regx = '', $options = array()) {
+        class_loader()->registerNamespace($namespace, $dir);
+        $options += array('fullpath'=>true, 'minDepth'=>2);
+        file_include($dir.'/'.$namespace, "|(\w+)/\\1.php$|is", $options);
+    }
+
     /**
      * 载入外部文件或目录
      */
-    public function import($dir, $regx = '', $options = array()) {
+    public static function import($dir, $regx = '', $options = array()) {
         if (is_file($dir)) {
             require_once $dir;
         } else {

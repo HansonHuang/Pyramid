@@ -136,7 +136,7 @@ abstract class EntityField {
     
     //单表写数据
     public static function writeTable($table, $item, $primary_keys = array()) {
-        $schema = $table;
+        $schema = EntityConfigurator::getSchema($table);
         $fields = array();
         if (is_string($primary_keys)) {
             $primary_keys = array($primary_keys);

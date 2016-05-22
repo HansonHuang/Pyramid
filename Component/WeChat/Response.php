@@ -72,7 +72,7 @@ class Response {
             $callback($this);
         }
         if (is_array($this->content) || is_object($this->content)) {
-            $output = '<xml>' . self::buildXML((array) $this->content) . '</xml>';
+            $output = '<xml>' . Utility::buildXML((array) $this->content) . '</xml>';
         } else {
             $output = (string) $this->content;
         }
@@ -107,31 +107,19 @@ class Response {
     public function __toString() {
         return var_export($this->content, true);
     }
+    
+    /**
+     * 魔术方法
+     */
+    public function __call($method, $args) {
+
+    }
 
     /**
      * 自身迭代
      */
     public static function create($content = null) {
         return new static($content);
-    }
-
-    //拼装wechat response数据
-    protected static function buildXML($array) {
-        $xmlData = '';
-        foreach ($array as $k => $v) {
-            if (is_numeric($k)) {
-                $k = 'item';
-            }
-            if (is_array($v) || is_object($v)) {
-                $xmlData .= "<$k>" . self::buildXML((array) $v) . "</$k>";
-            } else {
-                $v = preg_replace("/[\\x00-\\x08\\x0b-\\x0c\\x0e-\\x1f]/u", '', $v);
-                $v = str_replace(array('<![CDATA[',']]>'), array('< ![CDATA[',']] >'), $v);
-                $xmlData .= "<$k><![CDATA[" . $v . "]]></$k>";
-            }
-        }
-
-        return $xmlData;
     }
 
 }

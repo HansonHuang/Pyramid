@@ -32,6 +32,11 @@ class ApiHelper {
         return $this;
     }
     
+    //获取数据
+    public function getData() {
+        return $this->data;
+    }
+    
     //显示HTML文档
     public function show() {
         $html = '';

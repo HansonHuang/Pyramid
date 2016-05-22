@@ -9,7 +9,7 @@
 use Pyramid\Component\Database\Database;
 use Pyramid\Component\Password\Password;
 use Pyramid\Component\Utility\Xss;
-use Pyramid\Component\Utility\String;
+use Pyramid\Component\Utility\StringTool;
 use Pyramid\Component\Route\Route;
 use Pyramid\Component\Uuid\Uuid;
 use Pyramid\Component\Permission\Permission;
@@ -31,8 +31,8 @@ function route_register($route, $callback) {
 }
 
 //匹配route
-function route_match($path, $strict = false) {
-    return Route::match($path, $strict);
+function route_match($path) {
+    return Route::match($path);
 }
 
 //获取route
@@ -125,12 +125,12 @@ function is_cli() {
 
 //是否是UTF8编码
 function is_utf8($text) {
-    return String::isUTF8($text);
+    return StringTool::isUTF8($text);
 }
 
 //是否为合法email地址
 function is_email($email) {
-    return String::isEmail($email);
+    return StringTool::isEmail($email);
 }
 
 //Xss过滤
@@ -224,6 +224,7 @@ function file_include($dir, $regx, $options = array()) {
     foreach ($files as $f) {
         require_once $f['file'];
     }
+    return $files;
 }
 
 //curl
@@ -245,12 +246,21 @@ function curl($url, $headers = array(), $params = array(), $proxy = '') {
     );
     if (count($params)) {
         $option[CURLOPT_POST] = true;
-        $option[CURLOPT_POSTFIELDS] = http_build_query($params);
+        if (is_array($params) || is_object($params)) {
+            $option[CURLOPT_POSTFIELDS] = http_build_query($params);
+        } else {
+            $option[CURLOPT_POSTFIELDS] = $params;
+        }
     }
     if (stripos($url, 'https') === 0) {
         $option[CURLOPT_SSL_VERIFYPEER] = false;
         $option[CURLOPT_SSL_VERIFYHOST] = false;
     }
+	if (class_exists('\CURLFile')) {
+		curl_setopt($ch, CURLOPT_SAFE_UPLOAD, true);
+	} elseif (defined('CURLOPT_SAFE_UPLOAD')) {
+		curl_setopt($ch, CURLOPT_SAFE_UPLOAD, false);
+	}
     curl_setopt_array($ch, $option);
     $content = curl_exec($ch);
     if (curl_errno($ch) > 0) {

@@ -39,7 +39,7 @@ class Xss {
      */
     public function filter($string, $allowedTags = array(), $allowedStyleProperties = array()) {
         //非UTF8编码直接置空
-        if (!String::isUTF8($string)) {
+        if (!StringTool::isUTF8($string)) {
             return '';
         }
         //设置tags
@@ -233,7 +233,7 @@ class Xss {
             //对style深度清理
             if ($name == 'style') {
                 $sanitized_properties = array();
-                $properties = array_filter(array_map('trim', explode(';', String::decodeEntities($info['value']))));
+                $properties = array_filter(array_map('trim', explode(';', StringTool::decodeEntities($info['value']))));
                 foreach ($properties as $property) {
                     if (!preg_match('#^([a-zA-Z][-a-zA-Z]*)\s*:\s*(.*)$#', $property, $property_matches)) {
                         continue;
@@ -254,7 +254,7 @@ class Xss {
                             $url[1] = substr($url[1], 1, -1);
                         }
                         $url = preg_replace('`\\\\([(),\'"\s])`', '\1', $url[1]);
-                        if (String::filterBadProtocol($url) != $url) {
+                        if (StringTool::filterBadProtocol($url) != $url) {
                             continue;
                         }
                         if (!preg_match('`^/[^/]+`', $url)) {
@@ -270,7 +270,7 @@ class Xss {
                             }
                         }
                     }
-                    $sanitized_properties[] = $property_name . ':' . String::checkPlain($property_value);
+                    $sanitized_properties[] = $property_name . ':' . StringTool::checkPlain($property_value);
                 }
                 if (empty($sanitized_properties)) {
                     unset($return[$name]);
@@ -279,7 +279,7 @@ class Xss {
                 $info['value'] = implode('; ', $sanitized_properties);
             }
             else {
-                $info['value'] = String::filterBadProtocol($info['value']);
+                $info['value'] = StringTool::filterBadProtocol($info['value']);
             }
             
             $return[$name] = $name . '=' . $info['delimiter'] . $info['value'] . $info['delimiter'];

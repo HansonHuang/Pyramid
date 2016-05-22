@@ -123,9 +123,11 @@ class Response {
     /**
      * 设置输出格式 json xml html
      */
-    public function format($format, $formatWrapper = '') {
-        $this->format = strtolower($format);
-        $this->formatWrapper = $formatWrapper;
+    public function format($format, $formatWrapper = '', $overload = false) {
+        if (!$this->format || $overload) {
+            $this->format = strtolower($format);
+            $this->formatWrapper = $formatWrapper;
+        }
         return $this;
     }
 
@@ -273,7 +275,7 @@ class Response {
      * @api
      */
     public function sendContent() {
-        echo (string) $this->content;
+        echo $this->content;
         return $this;
     }
     
@@ -323,10 +325,9 @@ class Response {
     public function sendDefault($callback = null) {
         if ($callback && is_callable($callback)) {
             $callback($this);
-        } else {
-            $this->sendHeaders();
-            $this->sendContent();
         }
+        $this->sendHeaders();
+        $this->sendContent();
         static::finishRequest();
 
         return $this;
@@ -338,29 +339,25 @@ class Response {
      * @api
      */
     public function sendJson($options = 0, $callback = null, $jsonp = '') {
-        if (headers_sent()) {
-            return $this;
-        }
         $this->setHeader('Content-type', 'application/json; charset=utf-8');
         header(sprintf('HTTP/%s %s %s', $this->version, 200, 'OK'), true, 200);
         foreach ($this->headers as $name => $value) {
             header($name.': '.$value, false);
         }
-        $result = array(
-                    'status'    => $this->status,
-                    'message'   => $this->statusText,
-                    'data'      => $this->content,
-                    'variables' => (object) $this->variables,
-                );
-        if ($callback && is_callable($callback)) {
-            $result = $callback($result);
-        }
-        $result = json_encode($result, $options);
+        $result = json_encode(array(
+                      'status'    => $this->status,
+                      'message'   => $this->statusText,
+                      'data'      => $this->content,
+                      'variables' => (object) $this->variables,
+                  ), $options);
         if ($jsonp) {
-            echo $jsonp.'('.$result.')';
-        } else {
-            echo $result;
+            $result = $jsonp.'('.$result.')';
         }
+        $this->setContent($result);
+        if ($callback && is_callable($callback)) {
+            $callback($this);
+        }
+        $this->sendContent();
         static::finishRequest();
 
         return $this;
@@ -372,24 +369,23 @@ class Response {
      * @api
      */
     public function sendXML($callback = null) {
-        if (headers_sent()) {
-            return $this;
-        }
         $this->setHeader('Content-type', 'application/xml; charset=utf-8');
         header(sprintf('HTTP/%s %s %s', $this->version, 200, 'OK'), true, 200);
         foreach ($this->headers as $name => $value) {
             header($name.': '.$value, false);
         }
         $result = array(
-                    'status'    => $this->status,
-                    'message'   => $this->statusText,
-                    'data'      => $this->content,
-                    'variables' => (object) $this->variables,
-                );
+                      'status'    => $this->status,
+                      'message'   => $this->statusText,
+                      'data'      => $this->content,
+                      'variables' => (object) $this->variables,
+                  );
+        $result = '<?xml version="1.0" encoding="utf-8"?><root>' . self::arrayToXml($result) . '</root>';
+        $this->setContent($result);
         if ($callback && is_callable($callback)) {
-            $result = $callback($result);
+            $callback($this);
         }
-        echo '<?xml version="1.0" encoding="utf-8"?><root>', self::arrayToXml($result), '</root>';
+        $this->sendContent();
         static::finishRequest();
 
         return $this;

@@ -96,6 +96,16 @@ class EntityController {
     }
     
     /**
+     * 读取一个Entity对象
+     *
+     * @return object|false
+     */
+    public function loadObject($ids = array(), $conditions = array(), $fromQuery = false) {
+        $entities = $this->load($ids, $conditions, $fromQuery);
+        return reset($entities);
+    }
+
+    /**
      * 新增Entity
      */
     public function insert($entity) {
@@ -215,7 +225,7 @@ class EntityController {
      */
     public function merge($entity, $conditions = array()) {
         if (empty($conditions)) {
-            $this->insert($entity);
+            return $this->insert($entity);
         }
         //处理query,转换select的字段为 select 1 
         $query  = $this->buildQuery(array(), $conditions);

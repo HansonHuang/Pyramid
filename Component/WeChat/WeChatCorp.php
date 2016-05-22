@@ -139,6 +139,7 @@ class WeChatCorp extends WeChatCorpAPI {
         } elseif ($callback) {
             $response = call_user_func($callback, $request);
         } elseif ($this->fallbacks) {
+            $response = '';
             foreach ($this->fallbacks as $fallback) {
                 if (is_callable(array($fallback, $event))) {
                     $response = call_user_func(array($fallback, $event), $request); 
