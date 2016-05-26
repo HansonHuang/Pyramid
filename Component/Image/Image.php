@@ -31,6 +31,11 @@ class Image {
     protected $src_im;
 
     /**
+     * 是否需要交换src_im和dst_im
+     */
+    protected $needsExchange = false;
+
+    /**
      * 源图信息
      * @var array $info
      */
@@ -103,6 +108,7 @@ class Image {
      * @param int $pct
      */
     public function crop($x = 0, $y = 0, $width = 0, $height = 0, $pct = 100) {
+        $this->exchange();
         list($r, $g, $b, $a) = $this->background;
         $src_width  = imagesx($this->src_im);
         $src_height = imagesy($this->src_im);
@@ -116,6 +122,7 @@ class Image {
         $height = min($height, $src_height - $y);
         imagecopymerge($im, $this->src_im, 0, 0, $x, $y, $width, $height, $pct);        
         $this->dst_im = $im;
+        $this->needsExchange = true;
         
         return $this;
     }
@@ -126,7 +133,9 @@ class Image {
      * @param int $bgd_color
      */
     public function rotate($degrees = 0, $bgd_color = 0xFFFFFF) {
+        $this->exchange();
         $this->dst_im = imagerotate($this->src_im, $degrees, $bgd_color);
+        $this->needsExchange = true;
         return $this;
     }
     
@@ -137,6 +146,7 @@ class Image {
      * @param bool $tensile false:定比拉伸
      */
     public function scale($width = 0, $height = 0, $tensile = false) {
+        $this->exchange();
         list($r, $g, $b, $a) = $this->background;        
         $src_width  = imagesx($this->src_im);
         $src_height = imagesy($this->src_im);
@@ -155,6 +165,7 @@ class Image {
         imagefill($im, 0, 0, $bg);
         imagecopyresampled($im, $this->src_im, 0, 0, 0, 0, $width, $height, $src_width, $src_height);
         $this->dst_im = $im;
+        $this->needsExchange = true;
         
         return $this;
     }
@@ -164,6 +175,7 @@ class Image {
      * @param float $scale
      */
     public function zoom($scale = 1) {
+        $this->exchange();
         list($r, $g, $b, $a) = $this->background;
         $src_width  = imagesx($this->src_im);
         $src_height = imagesy($this->src_im);
@@ -175,6 +187,7 @@ class Image {
         imagefill($im, 0, 0, $bg);
         imagecopyresampled($im, $this->src_im, 0, 0, 0, 0, $width, $height, $src_width, $src_height);
         $this->dst_im = $im;
+        $this->needsExchange = true;
         
         return $this;
     }
@@ -183,9 +196,12 @@ class Image {
      * 将目标图资源设置为源图资源
      */
     public function exchange() {
-        $tmp = $this->src_im;
-        $this->src_im = $this->dst_im;
-        $this->dst_im = $tmp;
+        if ($this->needsExchange) {
+            $tmp = $this->src_im;
+            $this->src_im = $this->dst_im;
+            $this->dst_im = $tmp;
+            $this->needsExchange = false;
+        }
         return $this;
     }
     

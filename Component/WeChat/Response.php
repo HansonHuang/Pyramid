@@ -72,7 +72,7 @@ class Response {
             $callback($this);
         }
         if (is_array($this->content) || is_object($this->content)) {
-            $output = '<xml>' . Utility::buildXML((array) $this->content) . '</xml>';
+            $output = Utility::buildXML((array) $this->content);
         } else {
             $output = (string) $this->content;
         }

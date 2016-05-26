@@ -143,7 +143,7 @@ function xss_filter($string, $allowedTags = array(), $allowedStyleProperties = a
 }
 
 //组装树结构
-function data_to_tree($data, $root = 0, $id = 'tid', $pid = 'parent', $child = 'child') {
+function data_to_tree($data, $root = 0, $pid = 'parent', $child = 'child') {
     $tree  = array();
     $unset = array();
     foreach ($data as $tid => $v) {

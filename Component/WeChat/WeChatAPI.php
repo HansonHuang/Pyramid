@@ -39,7 +39,7 @@ class WeChatAPI {
             return $json;
         }
     }
-   
+
     /**
      * 发送模板消息
      *
@@ -74,7 +74,7 @@ class WeChatAPI {
             return $json;
         }
     }
-    
+
     /**
      * 上传临时素材
      *
@@ -92,7 +92,7 @@ class WeChatAPI {
             return $json;
         }
     }
-    
+
     /**
      * 下载临时素材
      *
@@ -126,6 +126,7 @@ class WeChatAPI {
             unionid        =>,
             remark         =>,
             groupid        => 0,
+            tagid_list     => [2,168]
         )
      */
     public function getUserInfo($openid) {
@@ -163,7 +164,6 @@ class WeChatAPI {
         foreach ($openids as $openid) {
             $data['user_list'][] = array(
                 'openid' => $openid,
-                'lang'   => 'zh_CN',
             );
         }
         $body  = Utility::http(sprintf($url, $token), Utility::json_encode($data));
@@ -174,7 +174,7 @@ class WeChatAPI {
             return $json;
         }
     }
-    
+
     /**
      * 设置用户备注
      *
@@ -193,7 +193,7 @@ class WeChatAPI {
             return true;
         }
     }
-    
+
     /**
      * 获取用户列表
      *
@@ -210,6 +210,127 @@ class WeChatAPI {
         static $url = 'https://api.weixin.qq.com/cgi-bin/user/get?access_token=%s&next_openid=%s';
         $token = $this->getAccessToken();
         $body  = Utility::http(sprintf($url, $token, $next_openid));
+        $json  = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return $json;
+        }
+    }
+
+    /**
+     * 新增或修改用户标签
+     * @see http://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140837
+     * @param {
+         tag : {
+             id 修改的时候用到
+             name: 30字以内
+         }
+       }
+     * @return {id name} | true | false
+     */
+    public function setTag($tag) {
+        static $urlCreate = 'https://api.weixin.qq.com/cgi-bin/tags/create?access_token=%s';
+        static $urlUpdate = 'https://api.weixin.qq.com/cgi-bin/tags/update?access_token=%s';
+        $token = $this->getAccessToken();
+        $type = empty($tag['tag']['id']) ? 'create' : 'update';
+        $body = Utility::http(sprintf($type=='update'?$urlUpdate:$urlCreate, $token), Utility::json_encode($tag));
+        $json = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return $type == 'update' ? true : $json['tag'];
+        }
+    }
+
+    /**
+     * 获取公众号已创建的标签
+     * @return array
+     */
+    public function getTags() {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/tags/get?access_token=%s';
+        $token = $this->getAccessToken();
+        $body = Utility::http(sprintf($url,$token));
+        $json = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return $json['tags'];
+        }
+    }
+
+    /**
+     * 删除用户标签
+     * @return boolean
+     */
+    public function deleteTag($tagid) {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/tags/delete?access_token=%s';
+        $token = $this->getAccessToken();
+        $body = Utility::http(sprintf($url,$token), '{"tag":{"id":'.$tagid.'}}');
+        $json = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * 批量给用户打标签
+     * @param openids [openid,openid] 每次不超过50个
+     * @param tagid 标签号
+     */
+    public function setUsersTag($openids, $tagid) {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/tags/members/batchtagging?access_token=%s';
+        $token = $this->getAccessToken();
+        $body  = Utility::http(sprintf($url, $token), Utility::json_encode(array(
+                    'openid_list' => $openids, 'tagid' => $tagid,
+                 )));
+        $json  = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+    
+    /**
+     * 批量取消用户标签
+     * @param openids [openid,openid] 每次不超过50个
+     * @param tagid 标签号
+     */
+    public function deleteUsersTag($openids, $tagid) {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/tags/members/batchuntagging?access_token=%s';
+        $token = $this->getAccessToken();
+        $body  = Utility::http(sprintf($url, $token), Utility::json_encode(array(
+                    'openid_list' => $openids, 'tagid' => $tagid,
+                 )));
+        $json  = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * 获取标签下的用户列表
+     * @param tagid
+     * @param next_openid
+     * @return boolean | array(
+            count
+            next_openid
+            data : {
+                openid : [OPENID, OPENID, ...]
+            }
+       )
+     */
+    public function getTagedUserList($tagid, $next_openid = '') {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/user/tag/get?access_token=%s';
+        $token = $this->getAccessToken();
+        $body  = Utility::http(sprintf($url, $token), Utility::json_encode(array(
+                    'tagid' => $tagid, 'next_openid' => $next_openid,
+                 )));
         $json  = json_decode($body, true);
         if (!$json || !empty($json['errcode'])) {
             return false;
@@ -458,6 +579,68 @@ class WeChatAPI {
         static $url = 'https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=%s';
         $token = $this->getAccessToken();
         $body  = Utility::http(sprintf($url, $token));
+        $json  = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * 添加个性化菜单
+     *
+     * @param {
+          button : [
+              {
+                type : click
+                name :
+                key  :
+              },
+              {
+                name :
+                sub_button : [
+                    type: view
+                    name:
+                    url :
+                ]
+              }
+          ],
+          
+          matchrule {  //至少1项
+              tag_id   //用户标签的id
+              sex      //0:未知 1:男 2:女,
+              country 
+              province
+              city
+              client_platform_type //1:iOS 2:Android 3:Other
+              language  //zh_CN zh_TW zh_HK en id ms es ja it pl pt ru th vi ar hi tr he de fr
+          }
+
+        }
+     * @return menuid | false
+     */
+    public function setConditionalMenu($menu) {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/menu/addconditional?access_token=%s';
+        $token = $this->getAccessToken();
+        $body  = Utility::http(sprintf($url, $token), Utility::json_encode($menu));
+        $json  = json_decode($body, true);
+        if (!$json || !empty($json['errcode'])) {
+            return false;
+        } else {
+            return $json['menuid'];
+        }
+    }
+    
+    /**
+     * 删除个性化菜单
+     *
+     * @return boolean
+     */
+    public function deleteConditionalMenu($menuid) {
+        static $url = 'https://api.weixin.qq.com/cgi-bin/menu/delconditional?access_token=%s';
+        $token = $this->getAccessToken();
+        $body  = Utility::http(sprintf($url, $token), Utility::json_encode(array('menuid'=>$menuid)));
         $json  = json_decode($body, true);
         if (!$json || !empty($json['errcode'])) {
             return false;
@@ -730,7 +913,7 @@ class WeChatAPI {
             'wxappid'   => $this->getConfig('appid'),
         );
         $data = Utility::makeSign($data, $this->getConfig('pay_key'));
-        $xml  = '<xml>' . Utility::buildXML($data) . '</xml>';
+        $xml  = Utility::buildXML($data);
         $body = Utility::http($url, $xml, $this->getConfig('certs'));
         try {
             $obj = @simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOBLANKS);
@@ -791,7 +974,7 @@ class WeChatAPI {
             'trade_type'  => 'JSAPI',
         );
         $data = Utility::makeSign($data, $this->getConfig('pay_key'));
-        $xml  = '<xml>' . Utility::buildXML($data) . '</xml>';
+        $xml  = Utility::buildXML($data);
         $body = Utility::http($url, $xml);
         try {
             $obj = @simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOBLANKS);

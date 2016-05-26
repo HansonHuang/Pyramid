@@ -264,6 +264,13 @@ class Request {
     }
 
     /*
+     * 获取Agent
+     */
+    public function getAgent() {
+        return $this->server->getParameter('HTTP_USER_AGENT', 'cli');
+    }
+
+    /*
      * 获取method
      */
     public function getMethod() {
