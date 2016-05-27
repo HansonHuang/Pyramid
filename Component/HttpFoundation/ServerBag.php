@@ -16,7 +16,7 @@ class ServerBag extends ParameterBag {
      */
     public $info = array(
         'scheme'    => 'cli',
-        'host'      => '127.0.0.1',
+        'host'      => '',
         'port'      => 80,
         'basepath'  => '',
         'pathinfo'  => '/',
@@ -122,7 +122,7 @@ class ServerBag extends ParameterBag {
                 $baseUrlDir = strtr($baseUrlDir, '\\', '/');
             }
             if ($baseUrl && false !== $prefix = $this->getUrlencodedPrefix($requestUri, $baseUrl)) {
-                $baseUrl = $prefix;
+               $baseUrl = $prefix;
             } elseif ($baseUrl && false !== $prefix = $this->getUrlencodedPrefix($requestUri, $baseUrlDir)) {
                 $baseUrl = $prefix;
             } elseif (strlen($requestUri) > strlen($baseUrl) && ($pos = strpos($requestUri, $baseUrl))) {

@@ -65,6 +65,8 @@ function bootstrap_configuration() {
     ini_set('session.use_trans_sid', '0');
     ini_set('session.cache_limiter', '');        
     timer_start();
+    require_once __DIR__ . '/config.php';
+    require_once __DIR__ . '/logger.php';
     set_error_handler('pyramid_error_handler');
     set_exception_handler('pyramid_exception_handler');
 }
@@ -72,8 +74,6 @@ function bootstrap_configuration() {
 //step2 内核
 function bootstrap_kernel() {
     require_once __DIR__ . '/kernel.php';
-    require_once __DIR__ . '/config.php';
-    require_once __DIR__ . '/logger.php';
 }
 
 //step3 公共代码资源

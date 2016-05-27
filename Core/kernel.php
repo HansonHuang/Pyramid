@@ -41,7 +41,11 @@ class Kernel {
         $route = Route::match($ipath);
         $request->route = new RouteBag($route);
         $this->init($request);
-        $this->afterRoute($request);
+        try {
+            $this->afterRoute($request);
+        } catch (Exception $e) {
+            return new Response($e->getMessage(), 406);
+        }
         if ($route && is_object($route['callback']) && get_class($route['callback']) == 'Closure') {
             $response = $route['callback']($request);
         } elseif ($route) {

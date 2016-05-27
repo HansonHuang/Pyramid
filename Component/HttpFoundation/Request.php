@@ -271,6 +271,13 @@ class Request {
     }
 
     /*
+     * 获取referer
+     */
+    public function getReferer() {
+        return $this->server->getParameter('HTTP_REFERER', '');
+    }
+
+    /*
      * 获取method
      */
     public function getMethod() {
