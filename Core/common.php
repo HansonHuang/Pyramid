@@ -16,13 +16,13 @@ use Pyramid\Component\Permission\Permission;
 use Pyramid\Component\Redis\Connection as RedisConnection;
 
 //注册权限
-function permission_register($module, array $permissions = array()) {
-    Permission::register($permissions, $module);
+function permission_register($permission, array $permissions = array()) {
+    Permission::register($permission, $permissions);
 }
 
 //获取权限
-function permission_get($module = null) {
-    return Permission::get($module);
+function permission_get($permission = null) {
+    return Permission::get($permission);
 }
 
 //注册route

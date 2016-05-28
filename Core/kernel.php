@@ -43,22 +43,24 @@ class Kernel {
         $this->init($request);
         try {
             $this->afterRoute($request);
-        } catch (Exception $e) {
+            if ($route && is_object($route['callback']) && get_class($route['callback']) == 'Closure') {
+                $response = $route['callback']($request);
+            } elseif ($route) {
+                $response = call_user_func($route['callback'], $request);
+            } else {
+                return new Response('', 404);
+            }
+            if ($response instanceof Response) {
+                return $response;
+            } elseif($response === null) {
+                return new Response('', 206);
+            } else {
+                return new Response($response);
+            }
+        } catch (ErrorException $e) {
             return new Response($e->getMessage(), 406);
-        }
-        if ($route && is_object($route['callback']) && get_class($route['callback']) == 'Closure') {
-            $response = $route['callback']($request);
-        } elseif ($route) {
-            $response = call_user_func($route['callback'], $request);
-        } else {
-            return new Response('', 404);
-        }
-        if ($response instanceof Response) {
-            return $response;
-        } elseif($response === null) {
-            return new Response('', 206);
-        } else {
-            return new Response($response);
+        } catch (Exception $e) {
+            throw $e;
         }
     }
 
@@ -101,7 +103,11 @@ class Kernel {
             foreach ($r->getMethods() as $method=>$m) {
                 if (!empty($m['comments']['route'])) {
                     $routes = $this->mergePathPrefix($m['comments']['route'], $prefix);
-                    route_register($routes, "{$project}\\{$module}\\{$module}::{$method}");
+                    if (!empty($m['comments']['access'])) {
+                        route_register($routes, array('callback'=>"{$project}\\{$module}\\{$module}::{$method}",'access'=>$m['comments']['access']));
+                    } else {
+                        route_register($routes, "{$project}\\{$module}\\{$module}::{$method}");
+                    }
                 }
             }
         }

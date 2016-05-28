@@ -9,14 +9,16 @@
 namespace Pyramid\Component\Permission;
 
 /*
+ [
     permission => array(
+        'bundle'        => '分类',
         'title'         => '标题',
         'description'   => '描述',
-        'module'        => '模块',
         'quantity'      => '标量化',
         'inherited'     => '被继承',
         'warning'       => '警告信息',
     )
+  ]
  */
 abstract class Permission {
     
@@ -33,56 +35,28 @@ abstract class Permission {
      * @param array $permissions
      * @param string $module
      */
-    public static function register(array $permissions = array(), $module = '') {
-        foreach ($permissions as $permission => $v) {
-            if (!isset($permissions[$permission]['module'])) {
-                $permissions[$permission]['module'] = $module;
-            }
+    public static function register($permission, array $permissions = array()) {
+        if (is_array($permission)) {
+            self::$permissions += $permission;
+        } else {
+            self::$permissions[$permission] = $permissions;
         }
-        self::$permissions += $permissions;
     }
     
     /**
      * 获取权限
      *
-     * @param array|string|null $module
-     * @return array
+     * @param $permission array|string|null
+     * @return array | $permission
      */
-    public static function get($module = null) {
-        if (isset($module) && is_string($module)) {
-            $return = array();
-            foreach (self::$permissions as $permission => $v) {
-                if ($v['module'] == $module) {
-                    $return[$permission] = $v;
-                }
-            }
-            return $return;
-        } elseif (isset($module) && is_array($module)) {
-            $return = array();
-            foreach (self::$permissions as $permission => $v) {
-                if (in_array($v['module'], $module)) {
-                    $return[$permission] = $v;
-                }
-            }
-            return $return;
-        } else {
+    public static function get($permission = null) {
+        if (is_null($permission)) {
             return self::$permissions;
+        } elseif (is_array($permission)) {
+            return array_intersect_key(self::$permissions, $permission);
+        } else {
+            return isset(self::$permissions[$permission]) ? self::$permissions[$permission] : $permission;
         }
-    }
-    
-    /**
-     * 获取模块列表
-     *
-     * @return array
-     */
-    public static function getModules() {
-        $modules = array();
-        foreach (self::$permissions as $permission => $v) {
-            if ($v['module']) {
-                $modules[$v['module']] = 1;
-            }
-        }
-        return array_keys($modules);
     }
 
 }

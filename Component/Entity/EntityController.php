@@ -208,7 +208,7 @@ class EntityController {
                 ->condition($this->primaryKey, $entityId)
                 ->execute();
             EntityField::fieldDelete($this->entityType, $entityId);
-            $this->afterDelete($entity);
+            $this->afterDelete($entityId);
         }
         catch (Exception $e) {
             $transaction->rollback();
@@ -361,9 +361,9 @@ class EntityController {
     /**
      * 执行数据删除后的再处理
      *
-     * @param object $entity
+     * @param $entityId
      */
-    protected function afterDelete($entity) {}
+    protected function afterDelete($entityId) {}
     
     /**
      * 执行数据删除前的再处理
