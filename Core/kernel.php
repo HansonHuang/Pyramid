@@ -104,9 +104,16 @@ class Kernel {
                 if (!empty($m['comments']['route'])) {
                     $routes = $this->mergePathPrefix($m['comments']['route'], $prefix);
                     if (!empty($m['comments']['access'])) {
-                        route_register($routes, array('callback'=>"{$project}\\{$module}\\{$module}::{$method}",'access'=>$m['comments']['access']));
+                        route_register($routes, array(
+                            'callback' => "{$project}\\{$module}\\{$module}::{$method}",
+                            'access'   => $m['comments']['access'],
+                            'comments' => $m['comments'],
+                        ));
                     } else {
-                        route_register($routes, "{$project}\\{$module}\\{$module}::{$method}");
+                        route_register($routes, array(
+                            'callback' => "{$project}\\{$module}\\{$module}::{$method}",
+                            'comments' => $m['comments'],
+                        ));
                     }
                 }
             }

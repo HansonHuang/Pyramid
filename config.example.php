@@ -7,6 +7,14 @@
  */
 
 
+//防止直接访问config爆路径 @notice:需在框架引入后再加载
+//if (!function_exists('config')) { exit('Access Denied for config.'); }
+
+
+//全局安装标识
+const LICENSE = 'pyramid';
+
+
 //配置: session
 $sessions = array(
     'prefix' => '',

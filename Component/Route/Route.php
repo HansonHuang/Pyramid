@@ -77,6 +77,9 @@ abstract class Route {
     public static function match($path) {
         $segments = static::getSegments($path);
         $length = count($segments);
+        if (!$length) {
+            return static::zeroWightRoute('', $segments);
+        }
         $max = (1<<$length) - 1;
         foreach (range($max,1) as $i) {
             if ($i < (1<<$length-1)) {
@@ -92,6 +95,19 @@ abstract class Route {
                 $info = static::$routes[$weight][$route];
                 return static::prepareRoute($info, $segments);
             }
+        }
+        return static::zeroWightRoute('*', $segments);
+    }
+
+    /**
+     * 零weight的路由可能有两个键 '' 和 '*'
+     * /  优先匹配 ''  再 '*'
+     * /x 匹配 '*'
+     */
+    public static function zeroWightRoute($key = '*', $segments) {
+        if (isset(static::$routes[0][$key])) {
+            $info = static::$routes[0][$key];
+            return static::prepareRoute($info, $segments);
         }
         if (isset(static::$routes[0]['*'])) {
             $info = static::$routes[0]['*'];

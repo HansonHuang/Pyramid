@@ -112,8 +112,14 @@ class Image {
         list($r, $g, $b, $a) = $this->background;
         $src_width  = imagesx($this->src_im);
         $src_height = imagesy($this->src_im);
-        $width  = $width ? $width : $src_width - $x;
-        $height = $height ? $height : $src_height - $y;
+        $width  = $width ? $width : $src_width;
+        $height = $height ? $height : $src_height;
+        if ($x == 'auto') {
+            $x = max(0, floor(($src_width-$width)/2));
+        }
+        if ($y == 'auto') {
+            $y = max(0, floor(($src_height-$height)/2));
+        }
         $im = imagecreatetruecolor($width, $height);
         imagesavealpha($im, true);
         $bg = imagecolorallocatealpha($im, $r, $g, $b, $a);
@@ -192,6 +198,22 @@ class Image {
         return $this;
     }
     
+    /**
+     * 自动缩放后剪切
+     * @param int $width
+     * @param int $height
+     * @param int $x
+     * @param int $y
+     * @param int $pct
+     */
+    public function autoCrop($width = 0, $height = 0, $x = 0, $y = 0, $pct = 100) {
+        $this->exchange();
+        $src_width  = imagesx($this->src_im);
+        $src_height = imagesy($this->src_im);
+        $zoom = max($width/$src_width, $height/$src_height);
+        return $this->zoom($zoom)->crop($x,$y,$width,$height);
+    }
+
     /**
      * 将目标图资源设置为源图资源
      */
